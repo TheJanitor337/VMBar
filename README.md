@@ -194,6 +194,7 @@ The menu refreshes when opened and after actions complete. (See Roadmap)
 
 ## Roadmap
 
+- Wire up start at login preference. Totally forgot to set that up. :)
 - Improve resume after suspend.
 - Improve menu bar auto-refresh and notifications.
 - Improve unit and UI tests.
