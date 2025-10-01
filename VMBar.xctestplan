@@ -1,0 +1,43 @@
+{
+  "configurations" : [
+    {
+      "id" : "CF28C65E-9C86-4A32-8BEC-F63C7EEFA17A",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "testing"
+      }
+    ],
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:VMBar.xcodeproj",
+      "identifier" : "C87D76C12E84D39D00A90D54",
+      "name" : "VMBar"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:VMBar.xcodeproj",
+        "identifier" : "C87D76CE2E84D39F00A90D54",
+        "name" : "VMBarTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:VMBar.xcodeproj",
+        "identifier" : "C87D76D82E84D3A000A90D54",
+        "name" : "VMBarUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
