@@ -7,6 +7,7 @@
 
 import Cocoa
 import Network
+import ServiceManagement
 
 /// A window controller that manages the Preferences window for configuring
 /// VMRest connection settings and app behavior.
@@ -115,7 +116,13 @@ class PreferencesWindowController: NSWindowController {
             passwordField.stringValue = ""
         }
         
-        startAtLoginCheckbox.state = defaults.bool(forKey: "startAtLogin") ? .on : .off
+        if #available(macOS 13.0, *) {
+            let isEnabled = isLoginItemEnabled()
+            startAtLoginCheckbox.state = isEnabled ? .on : .off
+            defaults.set(isEnabled, forKey: "startAtLogin")
+        } else {
+            startAtLoginCheckbox.state = defaults.bool(forKey: "startAtLogin") ? .on : .off
+        }
     }
     
     // MARK: - Validation Methods
@@ -407,11 +414,13 @@ class PreferencesWindowController: NSWindowController {
     }
     
     /// Called when the "Start at Login" checkbox changes.
-    /// Persists the boolean state to `UserDefaults`.
+    /// Updates both UserDefaults and the system login item registration.
     ///
     /// - Parameter sender: The checkbox button.
     @IBAction func startAtLoginChanged(_ sender: NSButton) {
-        defaults.set(sender.state == .on, forKey: "startAtLogin")
+        let shouldEnable = sender.state == .on
+        defaults.set(shouldEnable, forKey: "startAtLogin")
+        updateLoginItemStatus(shouldEnable)
     }
     
     // MARK: - Credential Management
@@ -433,26 +442,64 @@ class PreferencesWindowController: NSWindowController {
         }
     }
     
-//    @IBAction func clearCredentialsTapped(_ sender: Any) {
-//        let alert = NSAlert()
-//        alert.messageText = "Clear Credentials"
-//        alert.informativeText = "Are you sure you want to clear the stored credentials?"
-//        alert.addButton(withTitle: "Clear")
-//        alert.addButton(withTitle: "Cancel")
-//        alert.alertStyle = .warning
-//        
-//        let response = alert.runModal()
-//        if response == .alertFirstButtonReturn {
-//            if KeychainFactory.shared.deleteCredentials() {
-//                usernameField.stringValue = ""
-//                passwordField.stringValue = ""
-//                validateAllFields()
-//                updateTestConnectionButtonState()
-//            } else {
-//                showAlert(title: "Error", message: "Failed to clear stored credentials.")
-//            }
-//        }
-//    }
+    // MARK: - Start At Login
+    
+    /// Enables or disables the app as a login item using modern macOS APIs.
+    ///
+    /// - Parameter enabled: Whether to enable or disable login item status.
+    /// - Returns: `true` if the operation succeeded; otherwise `false`.
+    @available(macOS 13.0, *)
+    private func setLoginItemEnabled(_ enabled: Bool) -> Bool {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            return true
+        } catch {
+            print("Failed to \(enabled ? "enable" : "disable") login item: \(error)")
+            return false
+        }
+    }
+    
+    /// Retrieves the current login item status.
+    ///
+    /// - Returns: `true` if the app is registered as a login item; otherwise `false`.
+    @available(macOS 13.0, *)
+    private func isLoginItemEnabled() -> Bool {
+        return SMAppService.mainApp.status == .enabled
+    }
+
+    /// Enables or disables the app as a login item, with fallback for older macOS versions.
+    ///
+    /// - Parameter enabled: Whether to enable or disable login item status.
+    private func updateLoginItemStatus(_ enabled: Bool) {
+        if #available(macOS 13.0, *) {
+            let success = setLoginItemEnabled(enabled)
+            if !success {
+                // Revert checkbox on failure
+                DispatchQueue.main.async {
+                    self.startAtLoginCheckbox.state = enabled ? .off : .on
+                    self.showAlert(
+                        title: "Login Item Error",
+                        message: "Failed to \(enabled ? "enable" : "disable") start at login. Please check System Settings > General > Login Items."
+                    )
+                }
+            }
+        } else {
+            // For older macOS versions, show a message
+            showAlert(
+                title: "Not Supported",
+                message: "Start at login requires macOS 13.0 or later."
+            )
+            // Revert checkbox
+            DispatchQueue.main.async {
+                self.startAtLoginCheckbox.state = .off
+                self.defaults.set(false, forKey: "startAtLogin")
+            }
+        }
+    }
     
     // MARK: - Connection Testing
     
